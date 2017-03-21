@@ -15,6 +15,7 @@ def mkdir(title):
         os.makedirs(new_path)
     else:
         print("目录已经存在")
+        return int(1)
 
     return new_path
 
@@ -34,25 +35,39 @@ def getHtml(url):
     imgre = re.compile(reg)
     next_page=re.findall(imgre,html)
     print(next_page)
-    #return html
+    return 'http://www.cl864.com/'+next_page[0]
 
 def getImg(html,title):
-    new_path=mkdir(title)+'\\'
-    #print(new_path)
-    #print(html)
-    print(title)
-    page = urllib.request.urlopen(html)
-    html = page.read().decode('utf-8')
-    reg = r'<img\sid="aimg_(?s).*?file="(.+?\.(jpg|png|jpeg))"(?s).*?>'
-    imgre = re.compile(reg)
-    imglist = re.findall(imgre,html)
-    for i,imgurl in enumerate(imglist):
-        try:
-            print(imgurl[0])
-            urllib.request.urlretrieve(imgurl[0],(new_path+'%s.jpg')%i)
-        except urllib.error.HTTPError as reason:
-            print(reason)
-                
+    title=re.sub('[/\\\:\*\?"<>\|]','',title)
+    new_path=mkdir(title)
+    if new_path!=1:
+        new_path+='\\'
+        print(title)
+        page = urllib.request.urlopen(html)
+        html = page.read().decode('utf-8')
+        reg = r'<img\sid="aimg_(?s).*?file="(.+?(\.|;)(jpg|png|jpeg))"(?s).*?>'
+        imgre = re.compile(reg)
+        imglist = re.findall(imgre,html)
+        for i,imgurl in enumerate(imglist):
+            try:
+                print(imgurl[0])
+                urllib.request.urlretrieve(imgurl[0],(new_path+'%s.jpg')%i)
+            except TimeoutError:
+                continue
+            except urllib.error.HTTPError as reason:
+                if reason.code==403:
+                    opener=urllib.request.build_opener()
+                    opener.addheaders=[('User-Agent','Mozilla/5.0 (Windows NT 6.1; WOW64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/36.0.1941.0 Safari/537.36')]
+                    urllib.request.install_opener(opener)
+                    urllib.request.urlretrieve(imgurl[0],(new_path+'%s.jpg')%i)
+            except urllib.error.URLError as reason:
+                print(reason)
+            except:
+                print('有问题！')
 
-html = getHtml("http://www.cl864.com/forum-44-1.html")
+#test
+#getImg('http://www.cl864.com/thread-934718-1-1.html','Test')
+html="http://www.t66y.com/thread0806.php?fid=16"
+for i in range(100):
+    html = getHtml(html)
 
