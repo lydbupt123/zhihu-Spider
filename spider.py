@@ -1,6 +1,7 @@
 import urllib.request  
 import re
 import os
+import requests
 
 path='E:\\pictures\\'
 
@@ -15,43 +16,52 @@ def mkdir(title):
         os.makedirs(new_path)
     else:
         print("目录已经存在")
-        return int(1)
 
     return new_path
 
 def getHtml(url):
-    page = urllib.request.urlopen(url)
-    html = page.read().decode('utf-8')
-    reg = r'<tbody\sid="normalthread(?s).*?<th(?s).*?href="(thread.+?.html)(?s).*?>(.+?)</a>(?s).*?</tbody>'
+    proxy = {"http":"http://127.0.0.1:1080","https":"https://127.0.0.1:1080"}
+    response = requests.get(url,proxies = proxy,verify=False)
+    response.encoding='gbk'
+    html=response.text
+    reg = r'<a\shref="(htm_data.+?\.html)"'
     imgre = re.compile(reg)
     subhtml=re.findall(imgre,html)
     for page in subhtml:
-        page=list(page)
-        page[0]='http://www.cl864.com/'+str(page[0])
         #print(page)
-        #print(type(page))
-        getImg(page[0],page[1])
+        page='http://www.t66y.com/'+str(page)
+        getImg(page)
+        '''
     reg=r'<span\sid="fd_page_bottom">(?s).*<a\shref="(.+?\.html)"\sclass="nxt"(?s).*?</span>'
     imgre = re.compile(reg)
     next_page=re.findall(imgre,html)
     print(next_page)
-    return 'http://www.cl864.com/'+next_page[0]
+    return 'http://www.cl864.com/'+next_page[0]'''
 
-def getImg(html,title):
-    title=re.sub('[/\\\:\*\?"<>\|]','',title)
-    new_path=mkdir(title)
-    if new_path!=1:
+def getImg(url):
+    proxy = {"http":"http://127.0.0.1:1080","https":"https://127.0.0.1:1080"}
+    response = requests.get(url,proxies = proxy,verify=False)
+    response.encoding='gbk'
+    html=response.text
+    title_reg=r'<h4>(.*?)</h4>'
+    title_r=re.compile(title_reg)
+    title=re.findall(title_r,html)
+    if len(title)!=1:
+        print("此页面找不到Title：")
+        print(url)
+    else:
+        title=re.sub('[/\\\:\*\?"<>\|]','',title[0])
+        new_path=mkdir(title)
+        print(new_path)
         new_path+='\\'
-        print(title)
-        page = urllib.request.urlopen(html)
-        html = page.read().decode('utf-8')
-        reg = r'<img\sid="aimg_(?s).*?file="(.+?(\.|;)(jpg|png|jpeg))"(?s).*?>'
+        reg = r"<input\ssrc='(.+?\.jpg)'"
         imgre = re.compile(reg)
         imglist = re.findall(imgre,html)
         for i,imgurl in enumerate(imglist):
+            print(imgurl)
             try:
-                print(imgurl[0])
-                urllib.request.urlretrieve(imgurl[0],(new_path+'%s.jpg')%i)
+                img=requests.get(imgurl,proxies = proxy,verify=False)
+                img_download=open((new_path+'%s.jpg')%i,'wb').write(img.content)
             except TimeoutError:
                 continue
             except urllib.error.HTTPError as reason:
@@ -66,8 +76,8 @@ def getImg(html,title):
                 print('有问题！')
 
 #test
-#getImg('http://www.cl864.com/thread-934718-1-1.html','Test')
+#getImg('http://www.t66y.com/htm_data/16/1703/2312881.html')
 html="http://www.t66y.com/thread0806.php?fid=16"
-for i in range(100):
-    html = getHtml(html)
+#for i in range(100):
+html = getHtml(html)
 
