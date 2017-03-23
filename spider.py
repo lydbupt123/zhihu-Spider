@@ -25,18 +25,15 @@ def getHtml(url):
     response = requests.get(url,proxies = proxy)
     response.encoding='gbk'
     html=response.text
+    next_reg=r'<a>(?:.*?)<input(?:.*?)<a\shref="(.+)">下一頁'
+    next_url=re.compile(next_reg)
+    next_url=re.findall(next_url,html)
     reg = r'<a\shref="(htm_data.+?\.html)"'
     imgre = re.compile(reg)
     subhtml=re.findall(imgre,html)
     for i in range(len(subhtml)):
         subhtml[i]='http://www.t66y.com/'+str(subhtml[i])
-    return subhtml
-    '''
-    reg=r'<span\sid="fd_page_bottom">(?s).*<a\shref="(.+?\.html)"\sclass="nxt"(?s).*?</span>'
-    imgre = re.compile(reg)
-    next_page=re.findall(imgre,html)
-    print(next_page)
-    return 'http://www.cl864.com/'+next_page[0]'''
+    return subhtml,list(set(next_url))
 
 def getImg(url):
     #url=url['url']
@@ -54,12 +51,12 @@ def getImg(url):
         title=re.sub('[/\\\:\*\?"<>\|]','',title[0])
         new_path=mkdir(title)
         new_path+='\\'
-        reg = r"<input\ssrc='(.+?\.jpg)'"
+        reg = r"<input\ssrc='(.+?\.(jpg|gif|jpeg|png))'"
         imgre = re.compile(reg)
         imglist = re.findall(imgre,html)
         for i,imgurl in enumerate(imglist):
             try:
-                img=requests.get(imgurl,proxies = proxy)
+                img=requests.get(imgurl[0],proxies = proxy)
                 img_download=open((new_path+'%s.jpg')%i,'wb').write(img.content)
             except TimeoutError:
                 continue
@@ -72,27 +69,35 @@ def getImg(url):
             except urllib.error.URLError as reason:
                 print(reason)
             except:
+                print(imgurl[0])
                 print('有问题！')
 
 def main():
     html="http://www.t66y.com/thread0806.php?fid=16"
-    threads=[]
-    subhtml=getHtml(html)
     
-    for sh in subhtml:
-        sh={'url':sh}
-        t=threading.Thread(target=getImg,kwargs=sh)
-        threads.append(t)
-    for i,t in enumerate(threads):
-        t.start()
-    print('All Start At:'+ctime())
+    for num in range(2):
+        threads=[]
+        subhtml,next_page=getHtml(html)
+        for sh in subhtml:
+            sh={'url':sh}
+            t=threading.Thread(target=getImg,kwargs=sh)
+            threads.append(t)
+        for i,t in enumerate(threads):
+            t.start()
+        print('All Start At:'+ctime())
 
-    for i,t in enumerate(threads):
-        t.join()
-        print('Thread %s Finished!'%i)
+        for i,t in enumerate(threads):
+            t.join()
+            print('Thread %s Finished!'%i)
+
+        if len(next_page)==1:
+            html="http://www.t66y.com/"+next_page[0]
+        else:
+            print("沒有找到下一頁")
+            break
 
     print('All Done At:'+ctime())
 
-if __name__=='__spider__':
-    print('shit')
+if __name__=='__main__':
     main()
+
