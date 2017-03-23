@@ -2,6 +2,8 @@ import urllib.request
 import re
 import os
 import requests
+import threading
+from time import ctime
 
 path='E:\\pictures\\'
 
@@ -11,7 +13,6 @@ def mkdir(title):
     isExists=os.path.exists(new_path)
     new_path=new_path.rstrip('.')
     new_path=new_path.rstrip(' ')
-    print(new_path)
     if not isExists:
         os.makedirs(new_path)
     else:
@@ -21,17 +22,16 @@ def mkdir(title):
 
 def getHtml(url):
     proxy = {"http":"http://127.0.0.1:1080","https":"https://127.0.0.1:1080"}
-    response = requests.get(url,proxies = proxy,verify=False)
+    response = requests.get(url,proxies = proxy)
     response.encoding='gbk'
     html=response.text
     reg = r'<a\shref="(htm_data.+?\.html)"'
     imgre = re.compile(reg)
     subhtml=re.findall(imgre,html)
-    for page in subhtml:
-        #print(page)
-        page='http://www.t66y.com/'+str(page)
-        getImg(page)
-        '''
+    for i in range(len(subhtml)):
+        subhtml[i]='http://www.t66y.com/'+str(subhtml[i])
+    return subhtml
+    '''
     reg=r'<span\sid="fd_page_bottom">(?s).*<a\shref="(.+?\.html)"\sclass="nxt"(?s).*?</span>'
     imgre = re.compile(reg)
     next_page=re.findall(imgre,html)
@@ -39,8 +39,9 @@ def getHtml(url):
     return 'http://www.cl864.com/'+next_page[0]'''
 
 def getImg(url):
+    #url=url['url']
     proxy = {"http":"http://127.0.0.1:1080","https":"https://127.0.0.1:1080"}
-    response = requests.get(url,proxies = proxy,verify=False)
+    response = requests.get(url,proxies = proxy)
     response.encoding='gbk'
     html=response.text
     title_reg=r'<h4>(.*?)</h4>'
@@ -52,15 +53,13 @@ def getImg(url):
     else:
         title=re.sub('[/\\\:\*\?"<>\|]','',title[0])
         new_path=mkdir(title)
-        print(new_path)
         new_path+='\\'
         reg = r"<input\ssrc='(.+?\.jpg)'"
         imgre = re.compile(reg)
         imglist = re.findall(imgre,html)
         for i,imgurl in enumerate(imglist):
-            print(imgurl)
             try:
-                img=requests.get(imgurl,proxies = proxy,verify=False)
+                img=requests.get(imgurl,proxies = proxy)
                 img_download=open((new_path+'%s.jpg')%i,'wb').write(img.content)
             except TimeoutError:
                 continue
@@ -75,9 +74,25 @@ def getImg(url):
             except:
                 print('有问题！')
 
-#test
-#getImg('http://www.t66y.com/htm_data/16/1703/2312881.html')
-html="http://www.t66y.com/thread0806.php?fid=16"
-#for i in range(100):
-html = getHtml(html)
+def main():
+    html="http://www.t66y.com/thread0806.php?fid=16"
+    threads=[]
+    subhtml=getHtml(html)
+    
+    for sh in subhtml:
+        sh={'url':sh}
+        t=threading.Thread(target=getImg,kwargs=sh)
+        threads.append(t)
+    for i,t in enumerate(threads):
+        t.start()
+    print('All Start At:'+ctime())
 
+    for i,t in enumerate(threads):
+        t.join()
+        print('Thread %s Finished!'%i)
+
+    print('All Done At:'+ctime())
+
+if __name__=='__spider__':
+    print('shit')
+    main()
