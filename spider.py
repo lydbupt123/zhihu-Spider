@@ -5,7 +5,7 @@ import requests
 import threading
 from time import ctime
 
-path='E:\\pictures\\'
+path='G:\\pictures\\'
 
 def mkdir(title):
     new_path=path+title
@@ -41,7 +41,8 @@ def getImg(url):
     response = requests.get(url,proxies = proxy)
     response.encoding='gbk'
     html=response.text
-    title_reg=r'<h4>(.*?)</h4>'
+    #print(html)
+    title_reg=r'<title>(.*?)</title>'
     title_r=re.compile(title_reg)
     title=re.findall(title_r,html)
     if len(title)!=1:
@@ -73,9 +74,9 @@ def getImg(url):
                 print('有问题！')
 
 def main():
-    html="http://www.t66y.com/thread0806.php?fid=16"
+    html="http://www.t66y.com/thread0806.php?fid=16&search=&page=12"
     
-    for num in range(2):
+    for num in range(1):
         threads=[]
         subhtml,next_page=getHtml(html)
         for sh in subhtml:
